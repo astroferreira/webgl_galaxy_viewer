@@ -1,0 +1,15 @@
+{
+  "name": "gal3d",
+  "version": "1.0.0",
+  "description": "",
+  "main": "gal3d.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "server": "^1.0.38",
+    "three": "^0.158.0"
+  }
+}
