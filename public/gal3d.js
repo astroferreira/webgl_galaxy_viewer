@@ -34,6 +34,18 @@ let toggleStars = false;
 let toggleBurst = false;
 let toggleOld = false;
 
+let toggle0 = false;
+let toggle1 = false;
+let toggle2 = false;
+let toggle3 = false;
+let toggle4 = false;
+let toggle5 = false;
+let toggle6 = false;
+let toggle7 = false;
+let toggle8 = false;
+let toggle9 = false;
+
+
 
 function getFileNameFromQueryString() {
     const urlParams = new URLSearchParams(window.location.search);
@@ -69,17 +81,16 @@ function loadData() {
                 if (parts.length >= 5) {
                     vertices.push(parts[0]/1000, parts[1]/1000, parts[2]/1000); // x, y, z
                     sizes.push(parts[3]/500); // size
-                    if (Math.log10(parts[6]) < 9) {
-                        ages.push(1)
-                    } else if (Math.log10(parts[6]) > 9.84) {
-                        
-                        ages.push(2); // age
+                    ageNorm = Math.round(parts[6] / 1.0e9)
+                    if (ageNorm > 9) {
+                        ages.push(9);
                     } else {
-                        ages.push(0)
+                        ages.push(ageNorm);
                     }
+                    
                 }
             }
-
+           console.log(ages)
            addParticles(vertices, sizes, ages);
         })
         .catch(error => console.error('Error loading data:', error)); // Error handling
@@ -99,16 +110,24 @@ function addParticles(vertices, sizes, ages) {
 
     // Create the material and pass maximumAge to the shade
         const vertexShader = `
-        uniform bool uToggleStars;
-        uniform bool uToggleBurst;
-        uniform bool uToggleOld;
+        
+        uniform bool uToggle0;
+        uniform bool uToggle1;
+        uniform bool uToggle2;
+        uniform bool uToggle3;
+        uniform bool uToggle4;
+        uniform bool uToggle5;
+        uniform bool uToggle6;
+        uniform bool uToggle7;
+        uniform bool uToggle8;
+        uniform bool uToggle9;
+        
         attribute float size;
         varying float vSize;
-        attribute vec3 color; // New attribute for the color
-        attribute float age; // New attribute for the color
+        attribute vec3 color; 
+        attribute float age; 
         varying vec3 vColor;
         varying float vAge;
-
 
         void main() {
             vColor = color;
@@ -116,11 +135,26 @@ function addParticles(vertices, sizes, ages) {
             vAge = age;
             vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
             gl_PointSize = size;
-            if (uToggleStars && vAge == 0.0) {
+
+            if (uToggle0 && vAge == 0.0) {
                 gl_Position = vec4(0.0, 0.0, 0.0, 0.0);
-            } else if (uToggleBurst && vAge == 1.0) {
+            } else if (uToggle1 && vAge == 1.0) {
                 gl_Position = vec4(0.0, 0.0, 0.0, 0.0);
-            } else if (uToggleOld && vAge == 2.0) {
+            } else if (uToggle2 && vAge == 2.0) {
+                gl_Position = vec4(0.0, 0.0, 0.0, 0.0);
+            } else if (uToggle3 && vAge == 3.0) {
+                gl_Position = vec4(0.0, 0.0, 0.0, 0.0);
+            } else if (uToggle4 && vAge == 4.0) {
+                gl_Position = vec4(0.0, 0.0, 0.0, 0.0);
+            } else if (uToggle5 && vAge == 5.0) {
+                gl_Position = vec4(0.0, 0.0, 0.0, 0.0);
+            } else if (uToggle6 && vAge == 6.0) {
+                gl_Position = vec4(0.0, 0.0, 0.0, 0.0);
+            } else if (uToggle7 && vAge == 7.0) {
+                gl_Position = vec4(0.0, 0.0, 0.0, 0.0);
+            } else if (uToggle8 && vAge == 8.0) {
+                gl_Position = vec4(0.0, 0.0, 0.0, 0.0);
+            } else if (uToggle9 && vAge == 9.0) {
                 gl_Position = vec4(0.0, 0.0, 0.0, 0.0);
             } else {
                 gl_Position = projectionMatrix * mvPosition;
@@ -153,11 +187,20 @@ function addParticles(vertices, sizes, ages) {
             alpha *= pow(2.0, nu) / (pow(h_sm, nu) * sigma); // Apply normalization
 
             // Create a color map that represents the spectrum from violet to red
-            vec3 colors[3];
+            vec3 colors[10];
             
-            colors[0]  = vec3(1.0, 1.0, 1.0);
-            colors[1]  = vec3(0.0, 0.0, 1.0);
-            colors[2]  = vec3(1.0, 0.0, 0.0);
+            colors[0] = vec3(0.129999503869523, 0.118998934049376, 0.954000138575591);
+            colors[1] = vec3(0.229999503869523, 0.298998934049376, 0.754000138575591);
+            colors[2] = vec3(0.406839975594796, 0.537716815138862, 0.934353076530895);
+            colors[3] = vec3(0.602704657000925, 0.731255643849636, 0.999993037787936);
+            colors[4] = vec3(0.938414189694655, 0.935877766169784, 0.939423093082902);
+            colors[5] = vec3(0.930635712635114, 0.920337799431383, 0.931004577523922);
+            colors[6] = vec3(0.967788492347632, 0.657029312579374, 0.537326446666784);
+            colors[7] = vec3(0.887106659532162, 0.413948424491904, 0.32456448199742);
+            colors[8] = vec3(0.706000135911705, 0.015991824033981, 0.1500000719222);
+            colors[9] = vec3(0.96000135911705, 0.015991824033981, 0.000000719222);
+            
+            
             
             //float normalizedAge = clamp((vAge-7.0)/3.0, 0.0, 1.0); // Normalize based on max age
             // Determine color based on normalized age
@@ -172,12 +215,33 @@ function addParticles(vertices, sizes, ages) {
     const toggleStarsUniform = { value: toggleStars };
     const toggleBurstUniform = { value: toggleBurst };
     const toggleOldUniform = { value: toggleOld };
+    const toggle0Uniform = { value: toggle0 };
+    const toggle1Uniform = { value: toggle1 };
+    const toggle2Uniform = { value: toggle2 };
+    const toggle3Uniform = { value: toggle3 };
+    const toggle4Uniform = { value: toggle4 };
+    const toggle5Uniform = { value: toggle5 };
+    const toggle6Uniform = { value: toggle6 };
+    const toggle7Uniform = { value: toggle7 };
+    const toggle8Uniform = { value: toggle8 };
+    const toggle9Uniform = { value: toggle9 };
+    
     const material = new THREE.ShaderMaterial({
         uniforms: {
             color: { value: new THREE.Color(0xffffff) },
             uToggleStars: toggleStarsUniform,
             uToggleBurst: toggleBurstUniform,
             uToggleOld: toggleOldUniform,
+            uToggle0: toggle0Uniform,
+            uToggle1: toggle1Uniform,
+            uToggle2: toggle2Uniform,
+            uToggle3: toggle3Uniform,
+            uToggle4: toggle4Uniform,
+            uToggle5: toggle5Uniform,
+            uToggle6: toggle6Uniform,
+            uToggle7: toggle7Uniform,
+            uToggle8: toggle8Uniform,
+            uToggle9: toggle9Uniform,
         },
         vertexShader: vertexShader,
         fragmentShader: fragmentShader,
@@ -204,6 +268,109 @@ function animate() {
 }
 
 document.addEventListener('keydown', (event) => {
+
+    
+
+    if (event.key === '0') {
+        toggle0 = !toggle0;
+        particleSystem.material.uniforms.uToggle0.value = toggle0;
+        particleSystem.material.needsUpdate = true; // Mark the material as ne
+        
+        animate();
+        console.log(event.key);
+        console.log(1.0e9)
+    }
+
+    if (event.key === '1') {
+        toggle1 = !toggle1;
+        particleSystem.material.uniforms.uToggle1.value = toggle1;
+        particleSystem.material.needsUpdate = true; // Mark the material as ne
+        
+        animate();
+        console.log(event.key);
+        console.log(1.0e9)
+    }
+
+    if (event.key === '2') {
+        toggle2 = !toggle2;
+        particleSystem.material.uniforms.uToggle2.value = toggle2;
+        particleSystem.material.needsUpdate = true; // Mark the material as ne
+        
+        animate();
+        console.log(event.key);
+        console.log(1.0e9)
+    }
+
+    if (event.key === '3') {
+        toggle3 = !toggle3;
+        particleSystem.material.uniforms.uToggle3.value = toggle3;
+        particleSystem.material.needsUpdate = true; // Mark the material as ne
+        
+        animate();
+        console.log(event.key);
+        console.log(1.0e9)
+    }
+
+    if (event.key === '4') {
+        toggle4 = !toggle4;
+        particleSystem.material.uniforms.uToggle4.value = toggle4;
+        particleSystem.material.needsUpdate = true; // Mark the material as ne
+        
+        animate();
+        console.log(event.key);
+        console.log(1.0e9)
+    }
+
+    if (event.key === '5') {
+        toggle5 = !toggle5;
+        particleSystem.material.uniforms.uToggle5.value = toggle5;
+        particleSystem.material.needsUpdate = true; // Mark the material as ne
+        
+        animate();
+        console.log(event.key);
+        console.log(1.0e9)
+    }
+
+    if (event.key === '6') {
+        toggle6 = !toggle6;
+        particleSystem.material.uniforms.uToggle6.value = toggle6;
+        particleSystem.material.needsUpdate = true; // Mark the material as ne
+        
+        animate();
+        console.log(event.key);
+        console.log(1.0e9)
+    }
+
+    if (event.key === '7') {
+        toggle7 = !toggle7;
+        particleSystem.material.uniforms.uToggle7.value = toggle7;
+        particleSystem.material.needsUpdate = true; // Mark the material as ne
+        
+        animate();
+        console.log(event.key);
+        console.log(1.0e9)
+    }
+
+    if (event.key === '8') {
+        toggle8 = !toggle8;
+        particleSystem.material.uniforms.uToggle8.value = toggle8;
+        particleSystem.material.needsUpdate = true; // Mark the material as ne
+        
+        animate();
+        console.log(event.key);
+        console.log(1.0e9)
+    }
+
+    if (event.key === '9') {
+        toggle9 = !toggle9;
+        particleSystem.material.uniforms.uToggle9.value = toggle9;
+        particleSystem.material.needsUpdate = true; // Mark the material as ne
+        
+        animate();
+        console.log(event.key);
+        console.log(1.0e9)
+    }
+
     if (event.key === 's') { // Assuming 't' is the key to toggle
         toggleStars = !toggleStars;
 
