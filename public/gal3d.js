@@ -4,6 +4,8 @@ let scene, camera, renderer, controls, particleSystem;
 init();
 animate();
 
+
+
 function init() {
     // Scene setup
     scene = new THREE.Scene();
@@ -28,6 +30,10 @@ function init() {
 }
 
 
+let toggleStars = false;
+let toggleBurst = false;
+let toggleOld = false;
+
 
 function getFileNameFromQueryString() {
     const urlParams = new URLSearchParams(window.location.search);
@@ -51,45 +57,51 @@ function loadData() {
         return;
     }
 
-    fetch(fileName)
+    fetch(fileName + '_stars_.dat')
         .then(response => response.text())
         .then(text => {
             const vertices = [];
             const sizes = [];
             const ages = [];
-            let maximumAge = 0; // Initialize maximumAge
-
             const lines = text.split('\n');
             for (let line of lines) {
                 const parts = line.trim().split(/\s+/).map(part => parseFloat(part));
                 if (parts.length >= 5) {
                     vertices.push(parts[0]/1000, parts[1]/1000, parts[2]/1000); // x, y, z
-                    sizes.push(1)//parts[3]/100); // size
-                    ages.push(parts[6]); // age
-                    if (parts[6] > maximumAge) { // Update maximumAge if current age is larger
-                        maximumAge = parts[6];
+                    sizes.push(parts[3]/500); // size
+                    if (Math.log10(parts[6]) < 9) {
+                        ages.push(1)
+                    } else if (Math.log10(parts[6]) > 9.84) {
+                        
+                        ages.push(2); // age
+                    } else {
+                        ages.push(0)
                     }
                 }
             }
 
-            console.log("Maximum Age:", maximumAge); // For debugging
-            addParticles(vertices, sizes, ages, maximumAge);
+           addParticles(vertices, sizes, ages);
         })
         .catch(error => console.error('Error loading data:', error)); // Error handling
+
+
+
 }
 
 
 
-function addParticles(vertices, sizes, ages, maximumAge) {
+function addParticles(vertices, sizes, ages) {
     const geometry = new THREE.BufferGeometry();
     geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
     geometry.setAttribute('size', new THREE.Float32BufferAttribute(sizes, 1));
-    //geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
     geometry.setAttribute('age', new THREE.Float32BufferAttribute(ages, 1));
-    //geometry.setAttribute('mAge', new THREE.Float32BufferAttribute(ages, 1));
+
 
     // Create the material and pass maximumAge to the shade
         const vertexShader = `
+        uniform bool uToggleStars;
+        uniform bool uToggleBurst;
+        uniform bool uToggleOld;
         attribute float size;
         varying float vSize;
         attribute vec3 color; // New attribute for the color
@@ -104,7 +116,15 @@ function addParticles(vertices, sizes, ages, maximumAge) {
             vAge = age;
             vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
             gl_PointSize = size;
-            gl_Position = projectionMatrix * mvPosition;
+            if (uToggleStars && vAge == 0.0) {
+                gl_Position = vec4(0.0, 0.0, 0.0, 0.0);
+            } else if (uToggleBurst && vAge == 1.0) {
+                gl_Position = vec4(0.0, 0.0, 0.0, 0.0);
+            } else if (uToggleOld && vAge == 2.0) {
+                gl_Position = vec4(0.0, 0.0, 0.0, 0.0);
+            } else {
+                gl_Position = projectionMatrix * mvPosition;
+            }
         }
     `;
 
@@ -133,34 +153,31 @@ function addParticles(vertices, sizes, ages, maximumAge) {
             alpha *= pow(2.0, nu) / (pow(h_sm, nu) * sigma); // Apply normalization
 
             // Create a color map that represents the spectrum from violet to red
-            vec3 colorMap[7];
-            colorMap[0] = vec3(0.56, 0.0, 1.0); // Violet
-            colorMap[1] = vec3(0.0, 0.0, 1.0);  // Blue
-            colorMap[2] = vec3(1.0, 1.0, 1.0);  // Cyan
-            colorMap[3] = vec3(1.0, 1.0, 1.0);  // Green
-            colorMap[4] = vec3(1.0, 1.0, 0.0);  // Yellow
-            colorMap[5] = vec3(1.0, 0.5, 0.0);  // Orange
-            colorMap[6] = vec3(1.0, 0.0, 0.0);  // Red
-        
-            float normalizedAge = clamp(vAge / 7000000000.0, 0.0, 1.0); // Normalize based on max age
-        
+            vec3 colors[3];
+            
+            colors[0]  = vec3(1.0, 1.0, 1.0);
+            colors[1]  = vec3(0.0, 0.0, 1.0);
+            colors[2]  = vec3(1.0, 0.0, 0.0);
+            
+            //float normalizedAge = clamp((vAge-7.0)/3.0, 0.0, 1.0); // Normalize based on max age
             // Determine color based on normalized age
-            int index1 = int(normalizedAge * 6.0); // Integer part
-            int index2 = index1 + 1;               // Next index
-            float fractBetween = fract(normalizedAge * 6.0); // Fractional part
-        
-            // Linearly interpolate between two nearest colors
-            vec3 starColor = mix(colorMap[index1], colorMap[index2], fractBetween);
-        
+            int index = int(vAge); // Integer part
+            
+            vec3 starColor = colors[index];
             gl_FragColor = vec4(starColor, alpha);
         }
     `;
 
     // ShaderMaterial
+    const toggleStarsUniform = { value: toggleStars };
+    const toggleBurstUniform = { value: toggleBurst };
+    const toggleOldUniform = { value: toggleOld };
     const material = new THREE.ShaderMaterial({
         uniforms: {
             color: { value: new THREE.Color(0xffffff) },
-            maxAge: { value: maximumAge }
+            uToggleStars: toggleStarsUniform,
+            uToggleBurst: toggleBurstUniform,
+            uToggleOld: toggleOldUniform,
         },
         vertexShader: vertexShader,
         fragmentShader: fragmentShader,
@@ -182,7 +199,37 @@ function onWindowResize() {
 
 function animate() {
     requestAnimationFrame(animate);
-   
-    controls.update(); // Only required if using OrbitControls
+    controls.update(); 
     renderer.render(scene, camera);
 }
+
+document.addEventListener('keydown', (event) => {
+    if (event.key === 's') { // Assuming 't' is the key to toggle
+        toggleStars = !toggleStars;
+
+        particleSystem.material.uniforms.uToggleStars.value = toggleStars;
+        particleSystem.material.needsUpdate = true; // Mark the material as ne
+        
+        animate();
+    }
+
+    if (event.key === 'b') { // Assuming 't' is the key to toggle
+        toggleBurst = !toggleBurst;
+
+        particleSystem.material.uniforms.uToggleBurst.value = toggleBurst;
+        particleSystem.material.needsUpdate = true; // Mark the material as ne
+        
+        animate();
+    }
+
+    
+    if (event.key === 'o') { // Assuming 't' is the key to toggle
+        toggleOld = !toggleOld;
+
+        particleSystem.material.uniforms.uToggleOld.value = toggleOld;
+        particleSystem.material.needsUpdate = true; // Mark the material as ne
+        
+        animate();
+    }
+
+});
